@@ -17,8 +17,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-combo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-combo}
       POSTGRES_DB: ${POSTGRES_DB:-combo_db}
-    ports:
-      - "5432:5432"
     volumes:
       - "${PGDATA_BIND_PATH:-pgdata}:/var/lib/postgresql/data"
     healthcheck:
@@ -29,8 +27,6 @@ services:
 
   redis:
     image: redis:7
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -45,8 +41,6 @@ services:
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
       - esdata:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
       interval: 15s
@@ -67,8 +61,6 @@ services:
     volumes:
       - "${DATA_BIND_PATH:-./data}:/app/data"
       - fluxjobs:/var/lib/fluxdb/jobs
-    ports:
-      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -172,8 +164,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
     command: celery -A app.celery_app.celery_app flower --port=5555
-    ports:
-      - "5555:5555"
     depends_on:
       redis:
         condition: service_healthy
