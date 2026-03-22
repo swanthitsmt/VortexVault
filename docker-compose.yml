@@ -1,0 +1,184 @@
+services:
+  db:
+    image: postgres:15
+    command: >
+      postgres
+      -c shared_buffers=${PG_SHARED_BUFFERS:-1GB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-3GB}
+      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-512MB}
+      -c work_mem=${PG_WORK_MEM:-16MB}
+      -c wal_compression=${PG_WAL_COMPRESSION:-on}
+      -c max_wal_size=${PG_MAX_WAL_SIZE:-12GB}
+      -c checkpoint_timeout=${PG_CHECKPOINT_TIMEOUT:-15min}
+      -c checkpoint_completion_target=${PG_CHECKPOINT_COMPLETION_TARGET:-0.9}
+      -c random_page_cost=${PG_RANDOM_PAGE_COST:-1.1}
+      -c effective_io_concurrency=${PG_EFFECTIVE_IO_CONCURRENCY:-200}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-combo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-combo}
+      POSTGRES_DB: ${POSTGRES_DB:-combo_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - "${PGDATA_BIND_PATH:-pgdata}:/var/lib/postgresql/data"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-combo} -d ${POSTGRES_DB:-combo_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
+      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
+      ES_ENABLED: ${ES_ENABLED:-true}
+      ES_URL: http://elasticsearch:9200
+    command: >
+      sh -c "python scripts/wait_for_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - "${DATA_BIND_PATH:-./data}:/app/data"
+      - fluxjobs:/var/lib/fluxdb/jobs
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  worker-clean:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
+      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
+      ES_ENABLED: ${ES_ENABLED:-true}
+      ES_URL: http://elasticsearch:9200
+    command: >
+      sh -c "python scripts/wait_for_db.py && celery -A app.celery_app.celery_app worker --loglevel=INFO -Q clean --concurrency=${WORKER_CLEAN_CONCURRENCY:-2}"
+    volumes:
+      - "${DATA_BIND_PATH:-./data}:/app/data"
+      - fluxjobs:/var/lib/fluxdb/jobs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  worker-upload:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
+      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
+      ES_ENABLED: ${ES_ENABLED:-true}
+      ES_URL: http://elasticsearch:9200
+    command: >
+      sh -c "python scripts/wait_for_db.py && celery -A app.celery_app.celery_app worker --loglevel=INFO -Q upload --concurrency=${WORKER_UPLOAD_CONCURRENCY:-2}"
+    volumes:
+      - "${DATA_BIND_PATH:-./data}:/app/data"
+      - fluxjobs:/var/lib/fluxdb/jobs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  worker-merge:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
+      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
+      ES_ENABLED: ${ES_ENABLED:-true}
+      ES_URL: http://elasticsearch:9200
+    command: >
+      sh -c "python scripts/wait_for_db.py && celery -A app.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=${WORKER_MERGE_CONCURRENCY:-1}"
+    volumes:
+      - "${DATA_BIND_PATH:-./data}:/app/data"
+      - fluxjobs:/var/lib/fluxdb/jobs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  worker-pipeline:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
+      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
+      ES_ENABLED: ${ES_ENABLED:-true}
+      ES_URL: http://elasticsearch:9200
+    command: >
+      sh -c "python scripts/wait_for_db.py && celery -A app.celery_app.celery_app worker --loglevel=INFO -Q pipeline --concurrency=${WORKER_PIPELINE_CONCURRENCY:-1}"
+    volumes:
+      - "${DATA_BIND_PATH:-./data}:/app/data"
+      - fluxjobs:/var/lib/fluxdb/jobs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  flower:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
+    command: celery -A app.celery_app.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  fluxjobs:
+  esdata:

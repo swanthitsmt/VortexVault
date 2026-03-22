@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero mb-4 reveal">
+  <div>
+    <h1 class="hero-title">FluxDB Search Vault</h1>
+    <p class="hero-subtitle mb-0">Filter by URL, username, password, or regex patterns with fast pagination.</p>
+  </div>
+</section>
+
+<section class="surface mb-4 reveal stagger-1">
+  <div class="surface-head">
+    <h2 class="section-title">Query Filters</h2>
+    <p class="section-subtitle">Use targeted filters for faster results on large datasets.</p>
+  </div>
+  <form method="get" action="/search" class="row g-3 align-items-end query-form">
+    <div class="col-lg-4 col-md-6">
+      <label class="form-label">URL</label>
+      <input class="form-control" name="url" value="{{ url }}">
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <label class="form-label">Username</label>
+      <input class="form-control" name="username" value="{{ username }}">
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <label class="form-label">Password</label>
+      <input class="form-control" name="password" value="{{ password }}">
+    </div>
+    <div class="col-lg-2 col-md-6">
+      <label class="form-label">Options</label>
+      <div class="query-controls">
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" id="regex-toggle" type="checkbox" name="regex" value="true" {% if regex %}checked{% endif %}>
+          <label class="form-check-label" for="regex-toggle">Regex</label>
+        </div>
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" id="count-toggle" type="checkbox" name="include_total" value="true" {% if include_total %}checked{% endif %}>
+          <label class="form-check-label" for="count-toggle">Exact total (slower)</label>
+        </div>
+        <select class="form-select" name="page_size">
+          {% for s in [10,25,50,100] %}
+            <option value="{{ s }}" {% if page_size == s %}selected{% endif %}>{{ s }}/page</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-brand" type="submit">Search</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+{% if search_error %}
+<div class="alert alert-danger reveal" role="alert">
+  {{ search_error }}
+</div>
+{% endif %}
+{% if search_notice %}
+<div class="alert alert-warning reveal" role="alert">
+  {{ search_notice }}
+</div>
+{% endif %}
+
+<section class="row g-3 mb-4">
+  <div class="col-md-4 reveal stagger-1">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Matches</div>
+      <div class="kpi-value">
+        {% if results.total is not none %}
+          {{ "{:,}".format(results.total) }}
+        {% else %}
+          Skipped
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 reveal stagger-2">
+    <div class="kpi-card">
+      <div class="kpi-label">Execution Time</div>
+      <div class="kpi-value">{{ '%.2f'|format(results.execution_ms) }} ms</div>
+    </div>
+  </div>
+  <div class="col-md-4 reveal stagger-3">
+    <div class="kpi-card d-flex justify-content-between align-items-center">
+      <div>
+        <div class="kpi-label">Export</div>
+        <div class="kpi-value">CSV</div>
+      </div>
+      <a class="btn btn-soft" href="/search/export?{{ query_base }}">Download CSV</a>
+    </div>
+  </div>
+</section>
+
+<section class="surface reveal stagger-2">
+  <div class="table-responsive">
+    <table class="table table-modern align-middle mb-0">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>URL</th>
+          <th>Username</th>
+          <th>Password</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in results.rows %}
+        <tr>
+          <td>{{ row.id }}</td>
+          <td class="mono small text-truncate" style="max-width: 380px;">{{ row.url }}</td>
+          <td class="mono small text-truncate" style="max-width: 260px;">{{ row.username }}</td>
+          <td class="mono small text-truncate" style="max-width: 280px;">{{ row.password }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" class="text-center py-5 text-muted">No results found for this filter.</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<nav class="mt-3 reveal stagger-3">
+  <div class="search-pager">
+    <div class="pager-action">
+      {% if results.has_prev and results.prev_cursor %}
+      <a class="pager-link" href="/search?{{ query_base }}&direction=prev&cursor={{ results.prev_cursor }}">
+        <span class="pager-arrow">&#x2039;</span>
+        <span>Previous</span>
+      </a>
+      {% else %}
+      <button class="pager-link" type="button" disabled>
+        <span class="pager-arrow">&#x2039;</span>
+        <span>Previous</span>
+      </button>
+      {% endif %}
+    </div>
+    <div class="pager-window">
+      {% if results.rows %}
+        <span class="pager-title">{{ results.rows|length }} results on this page</span>
+        <span class="pager-meta">IDs {{ results.first_id }} to {{ results.last_id }}</span>
+      {% else %}
+        <span class="pager-title">No matching results</span>
+        <span class="pager-meta">Adjust filters and search again</span>
+      {% endif %}
+    </div>
+    <div class="pager-action text-end">
+      {% if results.has_next and results.next_cursor %}
+      <a class="pager-link pager-link-next" href="/search?{{ query_base }}&direction=next&cursor={{ results.next_cursor }}">
+        <span>Next</span>
+        <span class="pager-arrow">&#x203A;</span>
+      </a>
+      {% else %}
+      <button class="pager-link pager-link-next" type="button" disabled>
+        <span>Next</span>
+        <span class="pager-arrow">&#x203A;</span>
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+{% endblock %}

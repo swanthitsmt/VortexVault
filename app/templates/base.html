@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ request.app.title }}</title>
+  <link rel="icon" type="image/x-icon" href="/static/branding/favicon.ico?v=4">
+  <link rel="icon" type="image/png" href="/static/branding/favicon-256.png?v=4">
+  <link rel="icon" type="image/svg+xml" href="/static/branding/favicon.svg?v=4">
+  <link rel="apple-touch-icon" href="/static/branding/apple-touch-icon.png?v=4">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/app.css" rel="stylesheet">
+</head>
+<body>
+<header class="topbar mb-4">
+  <div class="container-xxl px-3 px-md-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <a class="brand" href="/dashboard">
+      <span class="brand-mark">
+        <img src="/static/branding/logo-square.png" alt="FluxDB logo" onerror="this.onerror=null;this.src='/static/branding/fluxdb-mark.svg';">
+      </span>
+      <span>{{ request.app.title }}</span>
+    </a>
+    {% set current_path = request.url.path %}
+    <nav class="nav-pill">
+      <a class="nav-pill-link {% if current_path == '/' or current_path.startswith('/dashboard') %}active{% endif %}" href="/dashboard">Dashboard</a>
+      <a class="nav-pill-link {% if current_path.startswith('/pipeline') or current_path.startswith('/jobs') %}active{% endif %}" href="/pipeline">Data Pipeline</a>
+      <a class="nav-pill-link {% if current_path.startswith('/search') %}active{% endif %}" href="/search">Search</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container-xxl px-3 px-md-4 pb-5">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="app-footer">
+  <div class="container-xxl px-3 px-md-4 d-flex align-items-center">
+    <img class="footer-logo" src="/static/branding/logo-square.png" alt="FluxDB logo" onerror="this.onerror=null;this.src='/static/branding/fluxdb-mark.svg';">
+    <span>{{ request.app.title }}</span>
+    <span class="mx-2">•</span>
+    <span>Data Platform</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

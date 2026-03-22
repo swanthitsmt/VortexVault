@@ -1,0 +1,3 @@
+# Place TLS certificate and key here before running prodlocal profile:
+# - tls.crt
+# - tls.key

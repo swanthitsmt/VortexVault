@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+.venv/
+venv/
+*.log
+.DS_Store
+data/input/
+data/output/
+data/jobs/*
+!.gitkeep

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="surface mb-4 reveal">
+  <div class="job-header">
+    <div class="job-heading">
+      <div class="section-kicker">Job Monitor</div>
+      <h1 class="hero-title mb-1">Job Details</h1>
+      <p class="section-subtitle mb-2">Type: {{ job.job_type.value }}</p>
+      <div class="job-id-line">
+        <span class="job-id-label">ID</span>
+        <code class="job-id-value mono" title="{{ job.id }}">{{ job.id }}</code>
+      </div>
+    </div>
+    <div class="job-actions">
+      <span id="job-status-pill" class="status-pill status-{{ job.status.value }}">{{ job.status.value }}</span>
+      <a href="/" class="btn btn-soft">Back</a>
+      <form method="post" action="/jobs/{{ job.id }}/pause">
+        <button class="btn btn-warning" {% if job.status.value not in ['running', 'queued'] %}disabled{% endif %}>Pause</button>
+      </form>
+      <form method="post" action="/jobs/{{ job.id }}/resume">
+        <button class="btn btn-success" {% if job.status.value not in ['paused', 'failed'] %}disabled{% endif %}>Resume</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section class="row g-3 mb-4">
+  <div class="col-md-4 reveal stagger-1">
+    <div class="kpi-card h-100">
+      <div class="kpi-label">Status</div>
+      <div id="job-status" class="kpi-value text-capitalize">{{ job.status.value }}</div>
+    </div>
+  </div>
+  <div class="col-md-4 reveal stagger-2">
+    <div class="kpi-card h-100">
+      <div class="kpi-label">Processed Lines</div>
+      <div id="processed-lines" class="kpi-value">{{ "{:,}".format(job.processed_lines) }}</div>
+    </div>
+  </div>
+  <div class="col-md-4 reveal stagger-3">
+    <div class="kpi-card h-100">
+      <div class="kpi-label">Current File</div>
+      <div id="current-file" class="mono small text-truncate" title="{{ job.current_file or '-' }}">{{ job.current_file or '-' }}</div>
+    </div>
+  </div>
+</section>
+
+<section class="surface mb-4 reveal stagger-2">
+  <div class="surface-head">
+    <h2 class="section-title">Live Counters</h2>
+    <p class="section-subtitle">These values refresh automatically every 2 seconds while the job is active.</p>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-3">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Normalized Rows</div>
+        <div id="unique-found" class="mini-stat-value">{{ "{:,}".format(job.unique_found) }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Rows Inserted</div>
+        <div id="rows-inserted" class="mini-stat-value">{{ "{:,}".format(job.rows_inserted) }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Rows Skipped</div>
+        <div id="rows-skipped" class="mini-stat-value">{{ "{:,}".format(job.rows_skipped) }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Output File</div>
+        <div id="output-file" class="mini-stat-value mono small text-truncate" title="{{ job.output_file or '-' }}">{{ job.output_file or '-' }}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="surface mb-4 reveal stagger-3">
+  <div class="surface-head">
+    <h2 class="section-title">Pipeline Telemetry</h2>
+    <p class="section-subtitle">Live metadata for bundle, upload shard, and merge progress.</p>
+  </div>
+  <div class="row g-3 px-3 pb-3">
+    <div class="col-md-3">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Merge Progress</div>
+        <div id="merge-progress" class="mini-stat-value">-</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Merge Rows/Sec</div>
+        <div id="merge-rps" class="mini-stat-value">-</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Current Staging Table</div>
+        <div id="merge-table" class="mini-stat-value mono small text-truncate" title="-">-</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Last Staging ID</div>
+        <div id="merge-last-id" class="mini-stat-value">-</div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Pipeline Bundle ID</div>
+        <div id="bundle-id" class="mini-stat-value mono small text-truncate" title="-">-</div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Upload Shards</div>
+        <div id="upload-shards" class="mini-stat-value">-</div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Upload Chunks</div>
+        <div id="upload-chunks" class="mini-stat-value">-</div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="mini-stat">
+        <div class="mini-stat-label">Upload Chunk Progress</div>
+        <div id="upload-chunk-progress" class="mini-stat-value">-</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="surface reveal stagger-3">
+  <div class="surface-head">
+    <h2 class="section-title">Error Log</h2>
+    <p class="section-subtitle">If a task fails, the message appears here.</p>
+  </div>
+  <pre id="error-text" class="error-box mb-0">{{ job.error_message or 'No errors' }}</pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const jobId = "{{ job.id }}";
+const statusPill = document.getElementById('job-status-pill');
+const statusClassMap = {
+  pending: 'status-pending',
+  queued: 'status-queued',
+  running: 'status-running',
+  paused: 'status-paused',
+  completed: 'status-completed',
+  failed: 'status-failed'
+};
+
+function updateStatusPill(status) {
+  if (!statusPill) return;
+  statusPill.className = 'status-pill ' + (statusClassMap[status] || 'status-pending');
+  statusPill.innerText = status;
+}
+
+const poll = async () => {
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`);
+    if (!res.ok) {
+      return;
+    }
+    const job = await res.json();
+
+    document.getElementById('job-status').innerText = job.status;
+    updateStatusPill(job.status);
+    document.getElementById('processed-lines').innerText = job.processed_lines.toLocaleString();
+    document.getElementById('current-file').innerText = job.current_file || '-';
+    document.getElementById('unique-found').innerText = job.unique_found.toLocaleString();
+    document.getElementById('rows-inserted').innerText = job.rows_inserted.toLocaleString();
+    document.getElementById('rows-skipped').innerText = job.rows_skipped.toLocaleString();
+    document.getElementById('output-file').innerText = job.output_file || '-';
+    document.getElementById('error-text').innerText = job.error_message || 'No errors';
+    const meta = job.meta || {};
+    const mergeProgress = meta.merge_progress_percent;
+    document.getElementById('merge-progress').innerText =
+      typeof mergeProgress === 'number' ? `${mergeProgress.toFixed(2)}%` : '-';
+    document.getElementById('merge-rps').innerText =
+      typeof meta.merge_rows_per_sec === 'number' ? meta.merge_rows_per_sec.toLocaleString() : '-';
+    const mergeTable = meta.merge_current_table || '-';
+    const mergeTableEl = document.getElementById('merge-table');
+    mergeTableEl.innerText = mergeTable;
+    mergeTableEl.title = mergeTable;
+    const mergeLastId = meta.merge_last_staging_id;
+    document.getElementById('merge-last-id').innerText =
+      typeof mergeLastId === 'number' ? mergeLastId.toLocaleString() : '-';
+    const bundleId = meta.pipeline_bundle_id || '-';
+    const bundleIdEl = document.getElementById('bundle-id');
+    bundleIdEl.innerText = bundleId;
+    bundleIdEl.title = bundleId;
+    const uploadShards = meta.upload_shard_count;
+    document.getElementById('upload-shards').innerText =
+      typeof uploadShards === 'number' ? uploadShards.toLocaleString() : '-';
+    const uploadChunksDone = meta.upload_chunks_completed;
+    const uploadChunksTotal = meta.upload_manifest_chunk_count;
+    document.getElementById('upload-chunks').innerText =
+      typeof uploadChunksDone === 'number' && typeof uploadChunksTotal === 'number'
+        ? `${uploadChunksDone.toLocaleString()} / ${uploadChunksTotal.toLocaleString()}`
+        : '-';
+    const uploadChunkProgress = meta.upload_chunk_progress_percent;
+    document.getElementById('upload-chunk-progress').innerText =
+      typeof uploadChunkProgress === 'number' ? `${uploadChunkProgress.toFixed(2)}%` : '-';
+
+    if (['completed', 'failed'].includes(job.status)) {
+      return;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  setTimeout(poll, 2000);
+};
+poll();
+</script>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero mb-4 reveal">
+  <div>
+    <h1 class="hero-title">FluxDB Search Dashboard</h1>
+    <p class="hero-subtitle mb-0">Real-time operational overview for large-scale staging + merge mode.</p>
+  </div>
+</section>
+
+<section class="row g-3 mb-4">
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="kpi-card reveal stagger-1">
+      <div class="kpi-label">Total Rows (Estimated)</div>
+      <div class="kpi-value">{{ metrics.total_rows_display }}</div>
+      <div class="form-hint">{{ "{:,}".format(metrics.total_rows_estimate) }} rows</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="kpi-card reveal stagger-2">
+      <div class="kpi-label">Database Total Size</div>
+      <div class="kpi-value">{{ metrics.db_size_display }}</div>
+      <div class="form-hint">{{ "{:,}".format(metrics.db_size_bytes) }} bytes</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="kpi-card reveal stagger-3">
+      <div class="kpi-label">Today Merged</div>
+      <div class="kpi-value">{{ metrics.today_inserted_display }}</div>
+      <div class="form-hint">{{ "{:,}".format(metrics.today_inserted) }} rows</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="kpi-card reveal stagger-4">
+      <div class="kpi-label">Last Updated</div>
+      <div class="kpi-value" style="font-size: 1rem;">{{ metrics.last_updated_display }}</div>
+      <div class="form-hint">Latest row timestamp in `combo_entries`</div>
+    </div>
+  </div>
+</section>
+
+<section class="surface action-card mb-4 reveal stagger-1 pipeline-primary-card">
+  <div class="surface-head">
+    <div class="pipeline-primary-headline">
+      <h2 class="section-title mb-0">One-Click Full Pipeline</h2>
+      <span class="status-pill status-completed">Recommended</span>
+    </div>
+    <p class="section-subtitle">Run clean -> upload -> merge automatically from one source path with checkpoint-safe execution.</p>
+  </div>
+  <form method="post" action="/jobs/pipeline" class="pipeline-primary-form">
+    <div class="pipeline-primary-row">
+      <div class="pipeline-primary-source">
+        <label class="form-label">Source Path</label>
+        <input name="source_path" class="form-control" placeholder="/app/data/input or /app/data/input/*.txt" required>
+        <div class="form-hint">Supports directory, single file, or glob pattern.</div>
+      </div>
+    </div>
+    <div class="pipeline-primary-row pipeline-primary-row-secondary">
+      <div class="pipeline-primary-output">
+        <label class="form-label">Output File (optional)</label>
+        <input name="output_file" class="form-control" placeholder="/app/data/output/cleaned_format.txt">
+        <div class="form-hint">If empty, file is saved automatically to <code>/app/data/output/pipeline_&lt;bundle_id&gt;.txt</code>.</div>
+        <div class="form-hint">On successful merge, this temporary clean output is auto-removed to save disk space.</div>
+      </div>
+      <div class="pipeline-primary-action">
+        <button class="btn btn-brand w-100" type="submit">Run Full Pipeline</button>
+      </div>
+    </div>
+  </form>
+  <div class="px-3 pb-3">
+    <a href="/pipeline" class="btn btn-soft">Open Advanced Pipeline Controls</a>
+  </div>
+</section>
+
+<section class="surface mb-4 reveal stagger-2">
+  <div class="surface-head">
+    <h2 class="section-title">System Status</h2>
+    <p class="section-subtitle">Live service availability indicators.</p>
+  </div>
+  <div class="px-3 pb-3">
+    <div class="d-flex flex-wrap gap-2">
+      <span class="status-pill {% if metrics.status.postgres %}status-completed{% else %}status-failed{% endif %}">
+        PostgreSQL: {% if metrics.status.postgres %}Online{% else %}Offline{% endif %}
+      </span>
+      <span class="status-pill {% if metrics.status.redis %}status-completed{% else %}status-failed{% endif %}">
+        Redis: {% if metrics.status.redis %}Online{% else %}Offline{% endif %}
+      </span>
+      <span class="status-pill {% if metrics.status.worker %}status-completed{% else %}status-failed{% endif %}">
+        Worker: {% if metrics.status.worker %}Online{% else %}Offline{% endif %}
+      </span>
+    </div>
+  </div>
+</section>
+
+<section class="row g-3 mb-4 reveal stagger-3">
+  <div class="col-12 col-lg-6">
+    <div class="surface h-100">
+      <div class="surface-head">
+        <h2 class="section-title">Queue Depth</h2>
+        <p class="section-subtitle">Backpressure input for auto-tuning upload workers.</p>
+      </div>
+      <div class="px-3 pb-3 d-flex flex-wrap gap-2">
+        <span class="status-pill status-queued">clean: {{ metrics.queue_depths.clean }}</span>
+        <span class="status-pill status-queued">upload: {{ metrics.queue_depths.upload }}</span>
+        <span class="status-pill status-queued">merge: {{ metrics.queue_depths.merge }}</span>
+        <span class="status-pill status-queued">pipeline: {{ metrics.queue_depths.pipeline }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="surface h-100">
+      <div class="surface-head">
+        <h2 class="section-title">Database I/O Snapshot</h2>
+        <p class="section-subtitle">Cumulative counters from pg_stat_database.</p>
+      </div>
+      <div class="px-3 pb-3 d-flex flex-wrap gap-2">
+        <span class="status-pill status-completed">blks_read: {{ "{:,}".format(metrics.db_blks_read) }}</span>
+        <span class="status-pill status-completed">blks_hit: {{ "{:,}".format(metrics.db_blks_hit) }}</span>
+        <span class="status-pill status-completed">tup_inserted: {{ "{:,}".format(metrics.db_tup_inserted) }}</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="surface reveal stagger-3">
+  <div class="surface-head">
+    <h2 class="section-title">Latest Jobs</h2>
+    <p class="section-subtitle">Quick view of recent task activity.</p>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-modern align-middle mb-0">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Processed</th>
+          <th>Inserted</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for job in recent_jobs %}
+        <tr>
+          <td class="mono small">{{ job.id }}</td>
+          <td class="text-capitalize">{{ job.job_type.value }}</td>
+          <td><span class="status-pill status-{{ job.status.value }}">{{ job.status.value }}</span></td>
+          <td>{{ "{:,}".format(job.processed_lines) }}</td>
+          <td>{{ "{:,}".format(job.rows_inserted) }}</td>
+          <td class="text-end"><a href="/jobs/{{ job.id }}" class="btn btn-sm btn-soft">Open</a></td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6" class="text-center py-5 text-muted">No jobs yet.</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

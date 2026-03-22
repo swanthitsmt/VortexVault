@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FluxDB Search logo">
+  <defs>
+    <radialGradient id="innerBg" cx="48%" cy="18%" r="78%">
+      <stop offset="0%" stop-color="#157a81"/>
+      <stop offset="45%" stop-color="#133f76"/>
+      <stop offset="100%" stop-color="#1a1e63"/>
+    </radialGradient>
+
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#32d8c7"/>
+      <stop offset="100%" stop-color="#1f8cb4"/>
+    </linearGradient>
+
+    <linearGradient id="swirlA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8efad9"/>
+      <stop offset="52%" stop-color="#45d2dc"/>
+      <stop offset="100%" stop-color="#2b88df"/>
+    </linearGradient>
+
+    <linearGradient id="swirlB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9effdd"/>
+      <stop offset="50%" stop-color="#4fdddb"/>
+      <stop offset="100%" stop-color="#3498e2"/>
+    </linearGradient>
+
+    <linearGradient id="swirlC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#74f3d4"/>
+      <stop offset="55%" stop-color="#3ec8dd"/>
+      <stop offset="100%" stop-color="#2c86de"/>
+    </linearGradient>
+
+    <radialGradient id="shine" cx="40%" cy="10%" r="80%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="236" fill="url(#ring)"/>
+  <circle cx="256" cy="256" r="220" fill="url(#innerBg)"/>
+  <circle cx="256" cy="256" r="220" fill="url(#shine)"/>
+
+  <!-- Soft depth shadow on swirls -->
+  <path d="M170 360 C142 276 177 191 294 132 C326 116 357 104 392 95"
+        fill="none" stroke="#0e2357" stroke-opacity="0.23" stroke-width="63" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M228 394 C205 336 232 286 303 247 C337 228 363 208 380 179"
+        fill="none" stroke="#102860" stroke-opacity="0.20" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M279 404 C258 365 264 331 295 299 C317 277 332 261 345 238"
+        fill="none" stroke="#0f2a63" stroke-opacity="0.20" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Main upward swoosh -->
+  <path d="M170 360 C142 276 177 191 294 132 C326 116 357 104 392 95"
+        fill="none" stroke="url(#swirlA)" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Arrow head -->
+  <path d="M356 79 L438 108 L374 158 L382 122 Z" fill="url(#swirlB)"/>
+
+  <!-- Middle inner swoosh -->
+  <path d="M228 394 C205 336 232 286 303 247 C337 228 363 208 380 179"
+        fill="none" stroke="url(#swirlB)" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Lower curl swoosh -->
+  <path d="M279 404 C258 365 264 331 295 299 C317 277 332 261 345 238"
+        fill="none" stroke="url(#swirlC)" stroke-width="45" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

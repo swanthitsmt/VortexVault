@@ -1,0 +1,32 @@
+services:
+  db:
+    ports:
+      - "5432:5432"
+  redis:
+    ports:
+      - "6379:6379"
+  elasticsearch:
+    ports:
+      - "9200:9200"
+  web:
+    env_file:
+      - .env.local
+    ports:
+      - "8000:8000"
+  worker-clean:
+    env_file:
+      - .env.local
+  worker-upload:
+    env_file:
+      - .env.local
+  worker-merge:
+    env_file:
+      - .env.local
+  worker-pipeline:
+    env_file:
+      - .env.local
+  flower:
+    env_file:
+      - .env.local
+    ports:
+      - "5555:5555"
