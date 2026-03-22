@@ -10,6 +10,7 @@ AUTH_USER="$1"
 AUTH_PASS="$2"
 INPUT_2GB="$3"
 INPUT_20GB="${4:-}"
+BASE_URL="${BASE_URL:-http://localhost:18000}"
 
 run_pipeline() {
   local src="$1"
@@ -18,7 +19,7 @@ run_pipeline() {
   resp=$(curl -k -sS -u "$AUTH_USER:$AUTH_PASS" \
     -H 'Content-Type: application/json' \
     -d "{\"source_path\":\"$src\"}" \
-    https://localhost/api/jobs/pipeline)
+    "$BASE_URL/api/jobs/pipeline")
 
   local clean_id merge_id
   clean_id=$(printf '%s' "$resp" | python3 -c 'import json,sys; o=json.load(sys.stdin); print(o["clean_job"]["id"])')
@@ -28,7 +29,7 @@ run_pipeline() {
   echo "merge_job=$merge_id"
 
   for i in $(seq 1 3600); do
-    status=$(curl -k -sS -u "$AUTH_USER:$AUTH_PASS" "https://localhost/api/jobs/$merge_id" | python3 -c 'import json,sys; o=json.load(sys.stdin); print(o.get("status"))')
+    status=$(curl -k -sS -u "$AUTH_USER:$AUTH_PASS" "$BASE_URL/api/jobs/$merge_id" | python3 -c 'import json,sys; o=json.load(sys.stdin); print(o.get("status"))')
     echo "[$i] merge_status=$status"
     if [ "$status" = "completed" ] || [ "$status" = "failed" ] || [ "$status" = "paused" ]; then
       break

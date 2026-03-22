@@ -55,6 +55,13 @@ cp .env.prodlocal .env
 docker compose -f docker-compose.yml -f docker-compose.prodlocal.yml up -d --build
 ```
 
+Prodlocal app URL (without edge profile): `http://localhost:18000`
+
+Optional LAN TLS edge profile:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prodlocal.yml --profile edge up -d
+```
+
 ## Default Workflow
 1. Start a Cleaner job from dashboard.
 2. Wait for completion (or pause/resume).

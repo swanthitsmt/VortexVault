@@ -19,9 +19,12 @@
    - `./scripts/generate_local_tls_cert.sh`
 4. Start stack:
    - `docker compose -f docker-compose.yml -f docker-compose.prodlocal.yml up -d --build`
-5. Verify health:
+5. (Optional) Start LAN TLS edge profile:
+   - `docker compose -f docker-compose.yml -f docker-compose.prodlocal.yml --profile edge up -d`
+6. Verify health:
    - `docker compose ps`
-   - Open `https://<host-ip>/dashboard`
+   - Local preflight: `http://localhost:18000/dashboard`
+   - With edge profile: `https://<host-ip>/dashboard`
 
 ## Storage Guidance
 - Use dedicated virtual disk for Postgres data.

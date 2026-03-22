@@ -10,3 +10,5 @@ data/input/
 data/output/
 data/jobs/*
 !.gitkeep
+infra/nginx/certs/*.crt
+infra/nginx/certs/*.key

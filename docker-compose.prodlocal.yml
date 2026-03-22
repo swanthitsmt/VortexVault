@@ -16,7 +16,8 @@ services:
   web:
     env_file:
       - .env.prodlocal
-    ports: []
+    ports:
+      - "127.0.0.1:18000:8000"
     restart: unless-stopped
 
   worker-clean:
@@ -47,6 +48,8 @@ services:
 
   edge:
     image: nginx:1.27-alpine
+    profiles:
+      - edge
     depends_on:
       - web
     volumes:
