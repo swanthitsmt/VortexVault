@@ -23,6 +23,14 @@
 - 100k line export
 - 1M line export
 
+## Suggested Commands
+- Pipeline benchmark:
+  - `./scripts/benchmark_matrix.sh <user> <pass> /app/data/input/<2gb_path> /app/data/input/<20gb_path>`
+- Search load test:
+  - `./scripts/search_load_test.sh <user> <pass> <url_filter> 200 20`
+- Export verification:
+  - `./scripts/export_verify.sh <user> <pass> <url_filter> /tmp/export.csv`
+
 ## Pass Criteria
 - Pipeline completes with cleanup (no staging/checkpoint leftovers)
 - Search performance remains stable without sustained timeout spikes
