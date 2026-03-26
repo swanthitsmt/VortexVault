@@ -1,61 +1,10 @@
 services:
-  db:
-    env_file:
-      - .env.prodlocal
-    ports: []
-    restart: unless-stopped
-
-  redis:
-    ports: []
-    restart: unless-stopped
-
-  elasticsearch:
-    ports: []
-    restart: unless-stopped
-
-  web:
-    env_file:
-      - .env.prodlocal
-    ports:
-      - "127.0.0.1:18000:8000"
-    restart: unless-stopped
-
-  worker-clean:
-    env_file:
-      - .env.prodlocal
-    restart: unless-stopped
-
-  worker-upload:
-    env_file:
-      - .env.prodlocal
-    restart: unless-stopped
+  # Example single-host production-like profile for Proxmox high-spec node.
+  worker-ingest:
+    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=8
 
   worker-merge:
-    env_file:
-      - .env.prodlocal
-    restart: unless-stopped
+    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=1
 
-  worker-pipeline:
-    env_file:
-      - .env.prodlocal
-    restart: unless-stopped
-
-  flower:
-    env_file:
-      - .env.prodlocal
-    ports: []
-    restart: unless-stopped
-
-  edge:
-    image: nginx:1.27-alpine
-    profiles:
-      - edge
-    depends_on:
-      - web
-    volumes:
-      - ./infra/nginx/prodlocal.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./infra/nginx/certs:/etc/nginx/certs:ro
-    ports:
-      - "80:80"
-      - "443:443"
-    restart: unless-stopped
+  worker-export:
+    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=2

@@ -1,38 +1,36 @@
-# Performance SLO and Preflight Gates
+# FluxDB v2 Performance SLO (Target)
 
-## Workload Target
-- Concurrent users: 10-30
-- Daily ingest: 20-100 GB
-- DB size horizon: 1-5 TB
+## Search SLO
+- P50: <= 25ms (hot queries)
+- P95: <= 50ms (hot queries)
+- P99: <= 150ms
 
-## Service Goals
-- Search p95 latency < 300 ms (filtered queries under target load)
-- No stuck jobs in ingest/merge pipeline
-- Export line-limit is exact and downloadable
+## Ingest SLO
+- Sustained ingest speed should not stall for > 60s without checkpoint updates.
+- Checkpoint update interval should remain predictable under configured stride (`10-50GB`).
+- Resume should continue from last successful checkpoint.
 
-## Preflight Matrix (local production-like)
-1. Ingest tests:
-- 2 GB dataset
-- 20 GB dataset
+## Export SLO
+- 100k rows export: typically <= 30s under normal load.
+- 1M rows export: typically <= 120s depending on selectivity.
 
-2. Search tests:
-- 10 concurrent users
-- 20 concurrent users
+## Resource SLO
+- PostgreSQL disk usage should stay metadata-dominant (small compared to raw dataset).
+- MinIO and Meili hold the bulk of data.
+- No unbounded queue growth for > 5 minutes.
 
-3. Export tests:
-- 100k line export
-- 1M line export
+## Measurement Commands
+Search load sample:
+```bash
+./scripts/search_load_test.sh gmail.com 200 20 http://localhost:8000
+```
 
-## Suggested Commands
-- Pipeline benchmark:
-  - `./scripts/benchmark_matrix.sh <user> <pass> /app/data/input/<2gb_path> /app/data/input/<20gb_path>`
-- Search load test:
-  - `./scripts/search_load_test.sh <user> <pass> <url_filter> 200 20`
-- Export verification:
-  - `./scripts/export_verify.sh <user> <pass> <url_filter> /tmp/export.csv`
+Ingest benchmark sample:
+```bash
+./scripts/benchmark_matrix.sh raw-combos raw/2gb.txt raw/20gb.txt http://localhost:8000
+```
 
-## Pass Criteria
-- Pipeline completes with cleanup (no staging/checkpoint leftovers)
-- Search performance remains stable without sustained timeout spikes
-- Export job completes within configured timeout window
-- Restart/retry resumes without duplicate inflation
+Export verification sample:
+```bash
+./scripts/export_verify.sh gmail.com 100000 /tmp/export.parquet http://localhost:8000
+```

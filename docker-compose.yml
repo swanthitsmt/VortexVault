@@ -1,174 +1,371 @@
 services:
-  db:
-    image: postgres:15
+  # Edge proxy for LAN users. In Proxmox production, terminate TLS here.
+  edge:
+    image: nginx:1.27-alpine
+    depends_on:
+      frontend:
+        condition: service_started
+      api:
+        condition: service_started
+    ports:
+      - "${EDGE_BIND_PORT:-8000}:80"
+    volumes:
+      - ./deploy/nginx/edge.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - fluxnet
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    networks:
+      - fluxnet
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: ${APP_ENV:-prodlocal}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-fluxdb}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+      MINIO_SECURE: "false"
+      MEILI_SHARDS: http://meili-shard-0:7700,http://meili-shard-1:7700,http://meili-shard-2:7700,http://meili-shard-3:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      INGEST_STREAM_CHUNK_BYTES: ${INGEST_STREAM_CHUNK_BYTES:-8388608}
+      INGEST_BATCH_DOCS: ${INGEST_BATCH_DOCS:-25000}
+      INGEST_CHECKPOINT_STRIDE_GB: ${INGEST_CHECKPOINT_STRIDE_GB:-20}
+      EXPORT_TMP_DIR: /tmp/fluxdb-exports
+    command: uvicorn fluxdb.main:app --host 0.0.0.0 --port 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      meili-shard-0:
+        condition: service_healthy
+      meili-shard-1:
+        condition: service_healthy
+      meili-shard-2:
+        condition: service_healthy
+      meili-shard-3:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fluxnet
+
+  worker-ingest:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: ${APP_ENV:-prodlocal}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-fluxdb}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+      MINIO_SECURE: "false"
+      MEILI_SHARDS: http://meili-shard-0:7700,http://meili-shard-1:7700,http://meili-shard-2:7700,http://meili-shard-3:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      INGEST_STREAM_CHUNK_BYTES: ${INGEST_STREAM_CHUNK_BYTES:-8388608}
+      INGEST_BATCH_DOCS: ${INGEST_BATCH_DOCS:-25000}
+      INGEST_CHECKPOINT_STRIDE_GB: ${INGEST_CHECKPOINT_STRIDE_GB:-20}
+    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=${INGEST_WORKER_CONCURRENCY:-8}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      meili-shard-0:
+        condition: service_healthy
+      meili-shard-1:
+        condition: service_healthy
+      meili-shard-2:
+        condition: service_healthy
+      meili-shard-3:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fluxnet
+
+  worker-merge:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: ${APP_ENV:-prodlocal}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-fluxdb}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+      MINIO_SECURE: "false"
+      MEILI_SHARDS: http://meili-shard-0:7700,http://meili-shard-1:7700,http://meili-shard-2:7700,http://meili-shard-3:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=${MERGE_WORKER_CONCURRENCY:-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      meili-shard-0:
+        condition: service_healthy
+      meili-shard-1:
+        condition: service_healthy
+      meili-shard-2:
+        condition: service_healthy
+      meili-shard-3:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fluxnet
+
+  worker-export:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: ${APP_ENV:-prodlocal}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-fluxdb}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+      MINIO_SECURE: "false"
+      MEILI_SHARDS: http://meili-shard-0:7700,http://meili-shard-1:7700,http://meili-shard-2:7700,http://meili-shard-3:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      EXPORT_TMP_DIR: /tmp/fluxdb-exports
+    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=${EXPORT_WORKER_CONCURRENCY:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      meili-shard-0:
+        condition: service_healthy
+      meili-shard-1:
+        condition: service_healthy
+      meili-shard-2:
+        condition: service_healthy
+      meili-shard-3:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fluxnet
+
+  flower:
+    build:
+      context: ./backend
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    command: celery -A fluxdb.celery_app.celery_app flower --port=5555
+    ports:
+      - "${FLOWER_BIND_PORT:-5555}:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fluxnet
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fluxdb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fluxdb}
+      POSTGRES_DB: ${POSTGRES_DB:-fluxdb}
     command: >
       postgres
-      -c shared_buffers=${PG_SHARED_BUFFERS:-1GB}
-      -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-3GB}
-      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-512MB}
-      -c work_mem=${PG_WORK_MEM:-16MB}
-      -c wal_compression=${PG_WAL_COMPRESSION:-on}
-      -c max_wal_size=${PG_MAX_WAL_SIZE:-12GB}
-      -c checkpoint_timeout=${PG_CHECKPOINT_TIMEOUT:-15min}
-      -c checkpoint_completion_target=${PG_CHECKPOINT_COMPLETION_TARGET:-0.9}
-      -c random_page_cost=${PG_RANDOM_PAGE_COST:-1.1}
-      -c effective_io_concurrency=${PG_EFFECTIVE_IO_CONCURRENCY:-200}
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-combo}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-combo}
-      POSTGRES_DB: ${POSTGRES_DB:-combo_db}
+      -c shared_buffers=${PG_SHARED_BUFFERS:-16GB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-64GB}
+      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-2GB}
+      -c work_mem=${PG_WORK_MEM:-64MB}
+      -c wal_compression=on
+      -c max_wal_size=${PG_MAX_WAL_SIZE:-32GB}
+      -c checkpoint_timeout=${PG_CHECKPOINT_TIMEOUT:-20min}
+      -c checkpoint_completion_target=0.9
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=300
     volumes:
-      - "${PGDATA_BIND_PATH:-pgdata}:/var/lib/postgresql/data"
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-combo} -d ${POSTGRES_DB:-combo_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fluxdb} -d ${POSTGRES_DB:-fluxdb}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 15
+    restart: unless-stopped
+    networks:
+      - fluxnet
 
   redis:
-    image: redis:7
+    image: redis/redis-stack-server:7.2.0-v18
+    command: ["redis-server", "--save", "60", "10000", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - fluxnet
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.2
+  minio:
+    image: minio/minio:RELEASE.2025-02-03T21-03-04Z
     environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fluxdb}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
-      - esdata:/usr/share/elasticsearch/data
+      - minio_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
-      interval: 15s
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+    networks:
+      - fluxnet
 
-  web:
-    build: .
-    env_file:
-      - .env
+  minio-init:
+    image: minio/mc:RELEASE.2025-02-08T19-14-21Z
+    depends_on:
+      minio:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
-      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
-      ES_ENABLED: ${ES_ENABLED:-true}
-      ES_URL: http://elasticsearch:9200
-    command: >
-      sh -c "python scripts/wait_for_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fluxdb}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
     volumes:
-      - "${DATA_BIND_PATH:-./data}:/app/data"
-      - fluxjobs:/var/lib/fluxdb/jobs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
+      - ./deploy/scripts/init-minio.sh:/init-minio.sh:ro
+    command: ["/bin/sh", "/init-minio.sh"]
+    restart: "no"
+    networks:
+      - fluxnet
 
-  worker-clean:
-    build: .
-    env_file:
-      - .env
+  meili-shard-0:
+    image: getmeili/meilisearch:v1.11
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
-      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
-      ES_ENABLED: ${ES_ENABLED:-true}
-      ES_URL: http://elasticsearch:9200
-    command: >
-      sh -c "python scripts/wait_for_db.py && celery -A app.celery_app.celery_app worker --loglevel=INFO -Q clean --concurrency=${WORKER_CLEAN_CONCURRENCY:-2}"
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: production
+      MEILI_DB_PATH: /meili_data
     volumes:
-      - "${DATA_BIND_PATH:-./data}:/app/data"
-      - fluxjobs:/var/lib/fluxdb/jobs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
+      - meili0_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - fluxnet
 
-  worker-upload:
-    build: .
-    env_file:
-      - .env
+  meili-shard-1:
+    image: getmeili/meilisearch:v1.11
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
-      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
-      ES_ENABLED: ${ES_ENABLED:-true}
-      ES_URL: http://elasticsearch:9200
-    command: >
-      sh -c "python scripts/wait_for_db.py && celery -A app.celery_app.celery_app worker --loglevel=INFO -Q upload --concurrency=${WORKER_UPLOAD_CONCURRENCY:-2}"
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: production
+      MEILI_DB_PATH: /meili_data
     volumes:
-      - "${DATA_BIND_PATH:-./data}:/app/data"
-      - fluxjobs:/var/lib/fluxdb/jobs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
+      - meili1_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - fluxnet
 
-  worker-merge:
-    build: .
-    env_file:
-      - .env
+  meili-shard-2:
+    image: getmeili/meilisearch:v1.11
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
-      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
-      ES_ENABLED: ${ES_ENABLED:-true}
-      ES_URL: http://elasticsearch:9200
-    command: >
-      sh -c "python scripts/wait_for_db.py && celery -A app.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=${WORKER_MERGE_CONCURRENCY:-1}"
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: production
+      MEILI_DB_PATH: /meili_data
     volumes:
-      - "${DATA_BIND_PATH:-./data}:/app/data"
-      - fluxjobs:/var/lib/fluxdb/jobs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
+      - meili2_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - fluxnet
 
-  worker-pipeline:
-    build: .
-    env_file:
-      - .env
+  meili-shard-3:
+    image: getmeili/meilisearch:v1.11
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
-      JOB_WORKDIR: ${JOB_WORKDIR_DOCKER:-/var/lib/fluxdb/jobs}
-      ES_ENABLED: ${ES_ENABLED:-true}
-      ES_URL: http://elasticsearch:9200
-    command: >
-      sh -c "python scripts/wait_for_db.py && celery -A app.celery_app.celery_app worker --loglevel=INFO -Q pipeline --concurrency=${WORKER_PIPELINE_CONCURRENCY:-1}"
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: production
+      MEILI_DB_PATH: /meili_data
     volumes:
-      - "${DATA_BIND_PATH:-./data}:/app/data"
-      - fluxjobs:/var/lib/fluxdb/jobs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-
-  flower:
-    build: .
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-combo}:${POSTGRES_PASSWORD_URLENC:-combo}@db:5432/${POSTGRES_DB:-combo_db}
-    command: celery -A app.celery_app.celery_app flower --port=5555
-    depends_on:
-      redis:
-        condition: service_healthy
+      - meili3_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - fluxnet
 
 volumes:
-  pgdata:
-  fluxjobs:
-  esdata:
+  pg_data:
+  redis_data:
+  minio_data:
+  meili0_data:
+  meili1_data:
+  meili2_data:
+  meili3_data:
+
+networks:
+  fluxnet:
+    driver: bridge

@@ -1,30 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -lt 5 ]; then
-  echo "Usage: $0 <auth_user> <auth_pass> <url_filter> <requests> <concurrency> [base_url]" >&2
+if [ "$#" -lt 3 ]; then
+  echo "Usage: $0 <query> <requests> <concurrency> [base_url]" >&2
   exit 1
 fi
 
-AUTH_USER="$1"
-AUTH_PASS="$2"
-URL_FILTER="$3"
-REQUESTS="$4"
-CONCURRENCY="$5"
-BASE_URL="${6:-http://localhost:18000}"
-
+QUERY="$1"
+REQUESTS="$2"
+CONCURRENCY="$3"
+BASE_URL="${4:-http://localhost:8000}"
 TMP_FILE="$(mktemp)"
 trap 'rm -f "$TMP_FILE"' EXIT
 
 run_one() {
-  curl -sS -u "$AUTH_USER:$AUTH_PASS" \
-    -o /dev/null \
-    -w "%{time_total}\n" \
-    "$BASE_URL/search?url=$URL_FILTER&page_size=25" || echo "ERR"
+  curl -sS -o /dev/null -w "%{time_total}\n" \
+    -X POST "${BASE_URL}/api/v2/search/query" \
+    -H 'Content-Type: application/json' \
+    -d "{\"query\":\"${QUERY}\",\"limit\":50,\"prefix\":true,\"typo_tolerance\":true}" || echo "ERR"
 }
 
 export -f run_one
-export AUTH_USER AUTH_PASS URL_FILTER BASE_URL
+export BASE_URL QUERY
 
 seq "$REQUESTS" | xargs -I{} -P "$CONCURRENCY" bash -lc 'run_one' >> "$TMP_FILE"
 
@@ -34,7 +31,7 @@ from statistics import median
 
 vals = []
 errs = 0
-for line in open(sys.argv[1]):
+for line in open(sys.argv[1], encoding="utf-8"):
     line = line.strip()
     if not line or line == "ERR":
         errs += 1

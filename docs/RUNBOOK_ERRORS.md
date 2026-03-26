@@ -1,48 +1,57 @@
-# Error Runbook
+# FluxDB v2 Error Runbook
 
 ## 1) `invalid byte sequence for encoding "UTF8": 0x00`
 Cause:
-- NUL byte in source line during COPY into PostgreSQL.
+- Raw data contains NUL bytes.
 
 Fix:
-1. Ensure parser/COPY sanitizer removes `\x00`.
-2. Re-run failed upload job.
-3. Confirm new rows are flowing into staging.
+- Parser already strips `\x00` in `backend/fluxdb/services/parser.py`.
+- Restart failed ingest job via resume endpoint.
+- If corruption is extreme, re-upload sanitized source object.
 
-## 2) `Search timed out`
+## 2) Search latency spikes / timeout feeling
 Cause:
-- Broad filters, expensive exact count, or index mismatch.
+- Broad query across all shards.
+- High ingest pressure while searching.
 
 Fix order:
-1. Disable exact total for wide queries.
-2. Narrow filters.
-3. Increase `SEARCH_STATEMENT_TIMEOUT_MS` and `SEARCH_COUNT_TIMEOUT_MS`.
-4. Verify trigram indexes exist and are valid.
+1. Narrow filters (`filter_url` / `filter_username`).
+2. Lower `limit`.
+3. Scale down ingest concurrency temporarily.
+4. Check Meili shard health and NVMe saturation.
 
-## 3) Upload slow + merge lag
+## 3) Upload fast, ingest slow
 Cause:
-- WAL/checkpoint pressure or DB I/O saturation.
+- Search shard indexing saturation.
+- Redis or DB backpressure.
 
 Fix:
-1. Temporarily reduce upload workers.
-2. Increase `PG_MAX_WAL_SIZE`, tune checkpoint settings.
-3. Confirm Postgres on dedicated NVMe and healthy IOPS.
-4. Keep merge workers isolated from upload workers.
+- Reduce `INGEST_BATCH_DOCS` (ex: `25000 -> 15000`) for smoother commits.
+- Tune ingest worker count based on CPU/IO.
+- Confirm Meili shards on dedicated NVMe.
 
-## 4) ES drift / empty first page
+## 4) Merge seems idle
 Cause:
-- Elasticsearch sync lag.
+- Merge queue is intentionally serial (`concurrency=1`) and only runs after ingest completion.
+
+Check:
+```bash
+docker compose logs worker-merge --tail=200
+```
+
+## 5) Export delayed
+Cause:
+- Very broad query with large line limit.
 
 Fix:
-1. Keep PostgreSQL fallback enabled.
-2. Monitor sync ratio and ES document count.
-3. Trigger backfill sync.
+- Run export with tighter filters.
+- Keep export worker isolated from ingest.
+- Increase export workers only if search shards still have headroom.
 
-## 5) CSV export too slow or timeout
+## 6) Resume not continuing correctly
 Cause:
-- Heavy synchronous stream export.
+- Source object key changed or replaced after checkpoint.
 
 Fix:
-1. Use async export jobs for large limits.
-2. Use SQL COPY + gzip output.
-3. Apply TTL cleanup for old export artifacts.
+- Keep immutable object keys per run.
+- Start a new ingest job for new object versions.

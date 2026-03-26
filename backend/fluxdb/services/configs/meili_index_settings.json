@@ -1,0 +1,11 @@
+{
+  "filterableAttributes": ["url", "username", "shard", "digest"],
+  "searchableAttributes": ["url", "username", "password"],
+  "sortableAttributes": ["ingested_at"],
+  "displayedAttributes": ["id", "url", "username", "password", "digest", "ingested_at", "shard"],
+  "typoTolerance": {
+    "enabled": true,
+    "disableOnAttributes": []
+  },
+  "prefixSearch": "indexingTime"
+}
