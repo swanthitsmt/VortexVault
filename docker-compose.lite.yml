@@ -1,0 +1,289 @@
+services:
+  edge:
+    image: nginx:1.27-alpine
+    depends_on:
+      frontend:
+        condition: service_started
+      api:
+        condition: service_started
+    ports:
+      - "${EDGE_BIND_PORT:-8000}:80"
+    volumes:
+      - ./deploy/nginx/edge.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: ${APP_ENV:-lite}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vortexvault123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+      MINIO_SECURE: "false"
+      MEILI_SHARDS: http://meili-shard-0:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
+      INGEST_STREAM_CHUNK_BYTES: ${INGEST_STREAM_CHUNK_BYTES:-2097152}
+      INGEST_BATCH_DOCS: ${INGEST_BATCH_DOCS:-10000}
+      INGEST_CHECKPOINT_STRIDE_GB: ${INGEST_CHECKPOINT_STRIDE_GB:-2}
+      EXPORT_TMP_DIR: /tmp/vortexvault-exports
+    command: uvicorn vortexvault.main:app --host 0.0.0.0 --port 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      meili-shard-0:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  worker-ingest:
+    build:
+      context: ./backend
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=${INGEST_WORKER_CONCURRENCY:-1}
+    environment:
+      APP_ENV: ${APP_ENV:-lite}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vortexvault123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+      MINIO_SECURE: "false"
+      MEILI_SHARDS: http://meili-shard-0:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
+      INGEST_STREAM_CHUNK_BYTES: ${INGEST_STREAM_CHUNK_BYTES:-2097152}
+      INGEST_BATCH_DOCS: ${INGEST_BATCH_DOCS:-10000}
+      INGEST_CHECKPOINT_STRIDE_GB: ${INGEST_CHECKPOINT_STRIDE_GB:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      meili-shard-0:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  worker-merge:
+    build:
+      context: ./backend
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=${MERGE_WORKER_CONCURRENCY:-1}
+    environment:
+      APP_ENV: ${APP_ENV:-lite}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vortexvault123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+      MINIO_SECURE: "false"
+      MEILI_SHARDS: http://meili-shard-0:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      meili-shard-0:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  worker-export:
+    build:
+      context: ./backend
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=${EXPORT_WORKER_CONCURRENCY:-1}
+    environment:
+      APP_ENV: ${APP_ENV:-lite}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vortexvault123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+      MINIO_SECURE: "false"
+      MEILI_SHARDS: http://meili-shard-0:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
+      EXPORT_TMP_DIR: /tmp/vortexvault-exports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      meili-shard-0:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  flower:
+    build:
+      context: ./backend
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    command: celery -A vortexvault.celery_app.celery_app flower --port=5555
+    ports:
+      - "${FLOWER_BIND_PORT:-5556}:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vortexvault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vortexvault}
+      POSTGRES_DB: ${POSTGRES_DB:-vortexvault}
+    command: >
+      postgres
+      -c shared_buffers=${PG_SHARED_BUFFERS:-512MB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-2GB}
+      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-128MB}
+      -c work_mem=${PG_WORK_MEM:-16MB}
+      -c wal_compression=on
+      -c max_wal_size=${PG_MAX_WAL_SIZE:-4GB}
+      -c checkpoint_timeout=${PG_CHECKPOINT_TIMEOUT:-10min}
+      -c checkpoint_completion_target=0.9
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=100
+    volumes:
+      - lite_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vortexvault} -d ${POSTGRES_DB:-vortexvault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  redis:
+    image: redis/redis-stack-server:7.2.0-v18
+    command: ["redis-server", "--save", "60", "10000", "--appendonly", "yes"]
+    volumes:
+      - lite_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-03T21-03-04Z
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-vortexvault123}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_CONSOLE_PORT:-9002}:9001"
+    volumes:
+      - lite_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-02-08T19-14-21Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-vortexvault123}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
+    volumes:
+      - ./deploy/scripts/init-minio.sh:/init-minio.sh:ro
+    command: ["/bin/sh", "/init-minio.sh"]
+    restart: "no"
+    networks:
+      - vortexnet
+
+  meili-shard-0:
+    image: getmeili/meilisearch:v1.11
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: production
+      MEILI_DB_PATH: /meili_data
+    volumes:
+      - lite_meili0_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - vortexnet
+
+volumes:
+  lite_pg_data:
+  lite_redis_data:
+  lite_minio_data:
+  lite_meili0_data:
+
+networks:
+  vortexnet:
+    driver: bridge

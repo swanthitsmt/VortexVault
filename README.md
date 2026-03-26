@@ -57,8 +57,11 @@ flowchart LR
 - `docker-compose.yml` full production-like single-host topology.
 - `docker-compose.local.yml` local dev overrides.
 - `docker-compose.prodlocal.yml` production-like worker overrides.
+- `docker-compose.lite.yml` low-resource local override (single search shard).
 - `deploy/` edge proxy and MinIO bootstrap scripts.
 - `scripts/` preflight + benchmark helpers.
+- `docs/SETUP_SERVER_PRODUCTION_MM.md` full server setup (step-by-step commands).
+- `docs/SETUP_LOCAL_LITE_MM.md` lightweight local test setup (step-by-step commands).
 
 ## Quick Start (Local)
 1. Prepare env:
@@ -78,6 +81,15 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 ```bash
 curl -s http://localhost:8000/health
 curl -s http://localhost:8000/api/v2/dashboard
+```
+
+## Quick Start (Local Lite)
+```bash
+./scripts/lite_up.sh
+```
+Stop:
+```bash
+./scripts/lite_down.sh
 ```
 
 ## Production-Like Preflight
