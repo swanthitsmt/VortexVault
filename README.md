@@ -1,6 +1,6 @@
-# FluxDB v2 - Maximum Performance Edition
+# VortexVault v2 - Maximum Performance Edition
 
-FluxDB v2 is a streaming ingestion + sharded search platform designed for very large TXT combo datasets on a single high-spec Proxmox host.
+VortexVault v2 is a streaming ingestion + sharded search platform designed for very large TXT combo datasets on a single high-spec Proxmox host.
 
 ## Goals
 - Ingest 1TB-class files with strict streaming (no full-file RAM load).

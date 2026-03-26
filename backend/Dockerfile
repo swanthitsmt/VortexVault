@@ -11,9 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY fluxdb ./fluxdb
+COPY vortexvault ./vortexvault
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-CMD ["uvicorn", "fluxdb.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "vortexvault.main:app", "--host", "0.0.0.0", "--port", "8080"]

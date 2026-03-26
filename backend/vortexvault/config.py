@@ -9,13 +9,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    app_name: str = "FluxDB v2"
+    app_name: str = "VortexVault v2"
     app_env: str = "local"
     api_host: str = "0.0.0.0"
     api_port: int = 8080
 
-    database_url: str = "postgresql+asyncpg://fluxdb:fluxdb@postgres:5432/fluxdb"
-    database_url_sync: str = "postgresql+psycopg://fluxdb:fluxdb@postgres:5432/fluxdb"
+    database_url: str = "postgresql+asyncpg://vortexvault:vortexvault@postgres:5432/vortexvault"
+    database_url_sync: str = "postgresql+psycopg://vortexvault:vortexvault@postgres:5432/vortexvault"
 
     redis_url: str = "redis://redis:6379/0"
     celery_broker_url: str = "redis://redis:6379/1"
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     search_default_limit: int = Field(default=100, ge=1, le=1000)
     search_max_limit: int = Field(default=5000, ge=10, le=20000)
 
-    export_tmp_dir: str = "/tmp/fluxdb-exports"
+    export_tmp_dir: str = "/tmp/vortexvault-exports"
     export_page_size: int = Field(default=5000, ge=1000, le=20000)
     export_presign_ttl_sec: int = Field(default=3600, ge=60, le=86400)
 

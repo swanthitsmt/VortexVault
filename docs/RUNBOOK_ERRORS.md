@@ -1,11 +1,11 @@
-# FluxDB v2 Error Runbook
+# VortexVault v2 Error Runbook
 
 ## 1) `invalid byte sequence for encoding "UTF8": 0x00`
 Cause:
 - Raw data contains NUL bytes.
 
 Fix:
-- Parser already strips `\x00` in `backend/fluxdb/services/parser.py`.
+- Parser already strips `\x00` in `backend/vortexvault/services/parser.py`.
 - Restart failed ingest job via resume endpoint.
 - If corruption is extreme, re-upload sanitized source object.
 

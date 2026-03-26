@@ -5,7 +5,7 @@ from collections.abc import Iterable
 import boto3
 from botocore.client import Config
 
-from fluxdb.config import settings
+from vortexvault.config import settings
 
 
 class MinioStore:

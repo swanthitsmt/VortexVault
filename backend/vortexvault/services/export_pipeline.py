@@ -10,10 +10,10 @@ import pyarrow.parquet as pq
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fluxdb.config import settings
-from fluxdb.models import ExportJob, JobStatus
-from fluxdb.services.meili import meili_router
-from fluxdb.services.minio_store import minio_store
+from vortexvault.config import settings
+from vortexvault.models import ExportJob, JobStatus
+from vortexvault.services.meili import meili_router
+from vortexvault.services.minio_store import minio_store
 
 
 def run_export_job(session: Session, job_id: UUID) -> ExportJob:

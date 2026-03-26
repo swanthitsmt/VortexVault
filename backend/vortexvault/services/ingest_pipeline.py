@@ -9,12 +9,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fluxdb.config import settings
-from fluxdb.models import IngestJob, JobStatus
-from fluxdb.services.dedupe import dedupe_service
-from fluxdb.services.meili import meili_router
-from fluxdb.services.minio_store import minio_store
-from fluxdb.services.parser import parse_chunk_lines, parse_combo_line
+from vortexvault.config import settings
+from vortexvault.models import IngestJob, JobStatus
+from vortexvault.services.dedupe import dedupe_service
+from vortexvault.services.meili import meili_router
+from vortexvault.services.minio_store import minio_store
+from vortexvault.services.parser import parse_chunk_lines, parse_combo_line
 
 
 def _digest(url: str, username: str, password: str) -> str:

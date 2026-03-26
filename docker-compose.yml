@@ -27,24 +27,24 @@ services:
       context: ./backend
     environment:
       APP_ENV: ${APP_ENV:-prodlocal}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
-      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-fluxdb}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vortexvault123}
       MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
       MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
       MINIO_SECURE: "false"
       MEILI_SHARDS: http://meili-shard-0:7700,http://meili-shard-1:7700,http://meili-shard-2:7700,http://meili-shard-3:7700
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
       INGEST_STREAM_CHUNK_BYTES: ${INGEST_STREAM_CHUNK_BYTES:-8388608}
       INGEST_BATCH_DOCS: ${INGEST_BATCH_DOCS:-25000}
       INGEST_CHECKPOINT_STRIDE_GB: ${INGEST_CHECKPOINT_STRIDE_GB:-20}
-      EXPORT_TMP_DIR: /tmp/fluxdb-exports
-    command: uvicorn fluxdb.main:app --host 0.0.0.0 --port 8080
+      EXPORT_TMP_DIR: /tmp/vortexvault-exports
+    command: uvicorn vortexvault.main:app --host 0.0.0.0 --port 8080
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,23 +71,23 @@ services:
       context: ./backend
     environment:
       APP_ENV: ${APP_ENV:-prodlocal}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
-      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-fluxdb}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vortexvault123}
       MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
       MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
       MINIO_SECURE: "false"
       MEILI_SHARDS: http://meili-shard-0:7700,http://meili-shard-1:7700,http://meili-shard-2:7700,http://meili-shard-3:7700
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
       INGEST_STREAM_CHUNK_BYTES: ${INGEST_STREAM_CHUNK_BYTES:-8388608}
       INGEST_BATCH_DOCS: ${INGEST_BATCH_DOCS:-25000}
       INGEST_CHECKPOINT_STRIDE_GB: ${INGEST_CHECKPOINT_STRIDE_GB:-20}
-    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=${INGEST_WORKER_CONCURRENCY:-8}
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=${INGEST_WORKER_CONCURRENCY:-8}
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,20 +114,20 @@ services:
       context: ./backend
     environment:
       APP_ENV: ${APP_ENV:-prodlocal}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
-      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-fluxdb}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vortexvault123}
       MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
       MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
       MINIO_SECURE: "false"
       MEILI_SHARDS: http://meili-shard-0:7700,http://meili-shard-1:7700,http://meili-shard-2:7700,http://meili-shard-3:7700
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
-    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=${MERGE_WORKER_CONCURRENCY:-1}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=${MERGE_WORKER_CONCURRENCY:-1}
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,21 +154,21 @@ services:
       context: ./backend
     environment:
       APP_ENV: ${APP_ENV:-prodlocal}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
-      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-fluxdb}:${POSTGRES_PASSWORD:-fluxdb}@postgres:5432/${POSTGRES_DB:-fluxdb}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
+      DATABASE_URL_SYNC: postgresql+psycopg://${POSTGRES_USER:-vortexvault}:${POSTGRES_PASSWORD:-vortexvault}@postgres:5432/${POSTGRES_DB:-vortexvault}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-fluxdb}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vortexvault123}
       MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
       MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
       MINIO_SECURE: "false"
       MEILI_SHARDS: http://meili-shard-0:7700,http://meili-shard-1:7700,http://meili-shard-2:7700,http://meili-shard-3:7700
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
-      EXPORT_TMP_DIR: /tmp/fluxdb-exports
-    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=${EXPORT_WORKER_CONCURRENCY:-2}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
+      EXPORT_TMP_DIR: /tmp/vortexvault-exports
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=${EXPORT_WORKER_CONCURRENCY:-2}
     depends_on:
       postgres:
         condition: service_healthy
@@ -196,7 +196,7 @@ services:
     environment:
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
-    command: celery -A fluxdb.celery_app.celery_app flower --port=5555
+    command: celery -A vortexvault.celery_app.celery_app flower --port=5555
     ports:
       - "${FLOWER_BIND_PORT:-5555}:5555"
     depends_on:
@@ -209,9 +209,9 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-fluxdb}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fluxdb}
-      POSTGRES_DB: ${POSTGRES_DB:-fluxdb}
+      POSTGRES_USER: ${POSTGRES_USER:-vortexvault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vortexvault}
+      POSTGRES_DB: ${POSTGRES_DB:-vortexvault}
     command: >
       postgres
       -c shared_buffers=${PG_SHARED_BUFFERS:-16GB}
@@ -227,7 +227,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fluxdb} -d ${POSTGRES_DB:-fluxdb}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vortexvault} -d ${POSTGRES_DB:-vortexvault}"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -252,8 +252,8 @@ services:
   minio:
     image: minio/minio:RELEASE.2025-02-03T21-03-04Z
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fluxdb}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-vortexvault123}
     command: server /data --console-address ":9001"
     ports:
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
@@ -274,8 +274,8 @@ services:
       minio:
         condition: service_healthy
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fluxdb}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-fluxdb123}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vortexvault}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-vortexvault123}
       MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-raw-combos}
       MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-exports}
     volumes:
@@ -288,7 +288,7 @@ services:
   meili-shard-0:
     image: getmeili/meilisearch:v1.11
     environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
       MEILI_NO_ANALYTICS: "true"
       MEILI_ENV: production
       MEILI_DB_PATH: /meili_data
@@ -306,7 +306,7 @@ services:
   meili-shard-1:
     image: getmeili/meilisearch:v1.11
     environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
       MEILI_NO_ANALYTICS: "true"
       MEILI_ENV: production
       MEILI_DB_PATH: /meili_data
@@ -324,7 +324,7 @@ services:
   meili-shard-2:
     image: getmeili/meilisearch:v1.11
     environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
       MEILI_NO_ANALYTICS: "true"
       MEILI_ENV: production
       MEILI_DB_PATH: /meili_data
@@ -342,7 +342,7 @@ services:
   meili-shard-3:
     image: getmeili/meilisearch:v1.11
     environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-fluxdb-master-key}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-vortexvault-master-key}
       MEILI_NO_ANALYTICS: "true"
       MEILI_ENV: production
       MEILI_DB_PATH: /meili_data

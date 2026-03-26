@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from fluxdb.config import settings
+from vortexvault.config import settings
 
 _SETTINGS_PATH = Path(__file__).resolve().parent / "configs" / "meili_index_settings.json"
 INDEX_SETTINGS = json.loads(_SETTINGS_PATH.read_text(encoding="utf-8"))

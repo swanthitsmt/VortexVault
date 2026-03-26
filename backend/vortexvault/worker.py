@@ -6,15 +6,15 @@ from uuid import UUID
 from celery import Task
 from sqlalchemy import select
 
-from fluxdb.celery_app import celery_app
-from fluxdb.config import settings
-from fluxdb.db import Base, SyncSessionLocal, sync_engine
-from fluxdb.models import JobStatus, MergeJob
-from fluxdb.services.export_pipeline import run_export_job
-from fluxdb.services.ingest_pipeline import run_ingest_job
-from fluxdb.services.meili import meili_router
-from fluxdb.services.merge_pipeline import run_merge_job
-from fluxdb.services.minio_store import minio_store
+from vortexvault.celery_app import celery_app
+from vortexvault.config import settings
+from vortexvault.db import Base, SyncSessionLocal, sync_engine
+from vortexvault.models import JobStatus, MergeJob
+from vortexvault.services.export_pipeline import run_export_job
+from vortexvault.services.ingest_pipeline import run_ingest_job
+from vortexvault.services.meili import meili_router
+from vortexvault.services.merge_pipeline import run_merge_job
+from vortexvault.services.minio_store import minio_store
 
 _INITIALIZED = False
 
@@ -37,7 +37,7 @@ def init_once() -> None:
     _INITIALIZED = True
 
 
-@celery_app.task(bind=True, base=BaseTask, name="fluxdb.worker.ingest_task", queue="ingest")
+@celery_app.task(bind=True, base=BaseTask, name="vortexvault.worker.ingest_task", queue="ingest")
 def ingest_task(self, job_id: str) -> None:
     init_once()
     with SyncSessionLocal() as session:
@@ -55,17 +55,17 @@ def ingest_task(self, job_id: str) -> None:
                 session.add(merge_job)
                 session.commit()
                 session.refresh(merge_job)
-                celery_app.send_task("fluxdb.worker.merge_task", args=[str(merge_job.id)], queue="merge")
+                celery_app.send_task("vortexvault.worker.merge_task", args=[str(merge_job.id)], queue="merge")
 
 
-@celery_app.task(bind=True, base=BaseTask, name="fluxdb.worker.merge_task", queue="merge")
+@celery_app.task(bind=True, base=BaseTask, name="vortexvault.worker.merge_task", queue="merge")
 def merge_task(self, merge_job_id: str) -> None:
     init_once()
     with SyncSessionLocal() as session:
         run_merge_job(session, UUID(merge_job_id))
 
 
-@celery_app.task(bind=True, base=BaseTask, name="fluxdb.worker.export_task", queue="export")
+@celery_app.task(bind=True, base=BaseTask, name="vortexvault.worker.export_task", queue="export")
 def export_task(self, job_id: str) -> None:
     init_once()
     with SyncSessionLocal() as session:

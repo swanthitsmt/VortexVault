@@ -1,4 +1,4 @@
-# FluxDB v2 Performance SLO (Target)
+# VortexVault v2 Performance SLO (Target)
 
 ## Search SLO
 - P50: <= 25ms (hot queries)

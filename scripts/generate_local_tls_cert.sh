@@ -13,7 +13,7 @@ openssl req -x509 -nodes -newkey rsa:4096 \
   -keyout "$CERT_DIR/tls.key" \
   -out "$CERT_DIR/tls.crt" \
   -days 825 \
-  -subj "/CN=fluxdb.local"
+  -subj "/CN=vortexvault.local"
 
 echo "Generated: $CERT_DIR/tls.crt"
 echo "Generated: $CERT_DIR/tls.key"

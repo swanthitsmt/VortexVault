@@ -1,10 +1,10 @@
 services:
   # Example single-host production-like profile for Proxmox high-spec node.
   worker-ingest:
-    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=8
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=8
 
   worker-merge:
-    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=1
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q merge --concurrency=1
 
   worker-export:
-    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=2
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=2

@@ -1,7 +1,7 @@
 # Meilisearch Sharding Strategy
 
 ## Shard Routing
-FluxDB v2 uses hash-based routing by digest:
+VortexVault v2 uses hash-based routing by digest:
 
 ```python
 shard_id = int(digest_hex[:8], 16) % shard_count
@@ -15,11 +15,11 @@ This guarantees deterministic placement per row and enables idempotent retries.
 - `combo_s02`
 - `combo_s03`
 
-Defined in `backend/fluxdb/services/meili.py`.
+Defined in `backend/vortexvault/services/meili.py`.
 
 ## Index Settings
 Canonical settings file:
-- `backend/fluxdb/services/configs/meili_index_settings.json`
+- `backend/vortexvault/services/configs/meili_index_settings.json`
 
 Applied on API/worker startup via `meili_router.ensure_indexes()`.
 

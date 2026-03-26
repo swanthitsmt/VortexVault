@@ -518,5 +518,5 @@ async def export_search_csv(
     )
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    headers = {"Content-Disposition": f'attachment; filename="fluxdb_search_export_{ts}.csv"'}
+    headers = {"Content-Disposition": f'attachment; filename="vortexvault_search_export_{ts}.csv"'}
     return StreamingResponse(generator, media_type="text/csv", headers=headers)

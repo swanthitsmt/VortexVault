@@ -8,7 +8,7 @@ from sqlalchemy import BIGINT, JSON, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from fluxdb.db import Base
+from vortexvault.db import Base
 
 
 class JobStatus(str, enum.Enum):

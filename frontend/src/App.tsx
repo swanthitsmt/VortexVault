@@ -162,7 +162,7 @@ export default function App() {
   return (
     <div className="page">
       <header className="hero">
-        <p className="eyebrow">FluxDB v2</p>
+        <p className="eyebrow">VortexVault v2</p>
         <h1>Maximum Performance Control Plane</h1>
         <p>
           Streaming ingest + sharded search optimized for single-host Proxmox deployments.

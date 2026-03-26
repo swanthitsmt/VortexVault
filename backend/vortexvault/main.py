@@ -9,11 +9,11 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fluxdb.celery_app import celery_app
-from fluxdb.config import settings
-from fluxdb.db import Base, async_engine, get_async_session
-from fluxdb.models import ExportJob, IngestJob, JobStatus, MergeJob, SearchMetric, UploadSession, UploadStatus
-from fluxdb.schemas import (
+from vortexvault.celery_app import celery_app
+from vortexvault.config import settings
+from vortexvault.db import Base, async_engine, get_async_session
+from vortexvault.models import ExportJob, IngestJob, JobStatus, MergeJob, SearchMetric, UploadSession, UploadStatus
+from vortexvault.schemas import (
     DashboardResponse,
     ExportCreateRequest,
     ExportJobResponse,
@@ -32,9 +32,9 @@ from fluxdb.schemas import (
     SearchQueryRequest,
     SearchQueryResponse,
 )
-from fluxdb.services.dedupe import dedupe_service
-from fluxdb.services.meili import meili_router
-from fluxdb.services.minio_store import minio_store
+from vortexvault.services.dedupe import dedupe_service
+from vortexvault.services.meili import meili_router
+from vortexvault.services.minio_store import minio_store
 
 app = FastAPI(title=settings.app_name, version="2.0.0")
 
@@ -144,7 +144,7 @@ async def create_ingest_job(payload: IngestCreateRequest, session: AsyncSession 
     await session.commit()
     await session.refresh(job)
 
-    celery_app.send_task("fluxdb.worker.ingest_task", args=[str(job.id)], queue="ingest")
+    celery_app.send_task("vortexvault.worker.ingest_task", args=[str(job.id)], queue="ingest")
     return IngestJobResponse.model_validate(job, from_attributes=True)
 
 
@@ -166,7 +166,7 @@ async def resume_ingest_job(job_id: UUID, session: AsyncSession = Depends(get_as
 
     job.status = JobStatus.queued
     await session.commit()
-    celery_app.send_task("fluxdb.worker.ingest_task", args=[str(job.id)], queue="ingest")
+    celery_app.send_task("vortexvault.worker.ingest_task", args=[str(job.id)], queue="ingest")
     await session.refresh(job)
     return IngestJobResponse.model_validate(job, from_attributes=True)
 
@@ -186,7 +186,7 @@ async def create_merge_job(payload: MergeCreateRequest, session: AsyncSession = 
     await session.commit()
     await session.refresh(merge_job)
 
-    celery_app.send_task("fluxdb.worker.merge_task", args=[str(merge_job.id)], queue="merge")
+    celery_app.send_task("vortexvault.worker.merge_task", args=[str(merge_job.id)], queue="merge")
     return MergeJobResponse.model_validate(merge_job, from_attributes=True)
 
 
@@ -244,7 +244,7 @@ async def create_export_job(payload: ExportCreateRequest, session: AsyncSession 
     await session.commit()
     await session.refresh(job)
 
-    celery_app.send_task("fluxdb.worker.export_task", args=[str(job.id)], queue="export")
+    celery_app.send_task("vortexvault.worker.export_task", args=[str(job.id)], queue="export")
     return ExportJobResponse.model_validate(job, from_attributes=True)
 
 

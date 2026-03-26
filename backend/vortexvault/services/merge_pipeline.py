@@ -6,9 +6,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fluxdb.models import IngestJob, JobStatus, MergeJob
-from fluxdb.services.dedupe import dedupe_service
-from fluxdb.services.minio_store import minio_store
+from vortexvault.models import IngestJob, JobStatus, MergeJob
+from vortexvault.services.dedupe import dedupe_service
+from vortexvault.services.minio_store import minio_store
 
 
 def run_merge_job(session: Session, merge_job_id: UUID) -> MergeJob:

@@ -1,9 +1,9 @@
 services:
   worker-ingest:
-    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=2
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q ingest --concurrency=2
 
   worker-export:
-    command: celery -A fluxdb.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=1
+    command: celery -A vortexvault.celery_app.celery_app worker --loglevel=INFO -Q export --concurrency=1
 
   postgres:
     command: >

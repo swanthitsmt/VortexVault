@@ -1,4 +1,4 @@
-# FluxDB v2 Deployment on Single Proxmox Host
+# VortexVault v2 Deployment on Single Proxmox Host
 
 ## Target
 Single Proxmox node with:
@@ -18,9 +18,9 @@ For first production rollout, a single VM can host all containers using `docker-
 
 ## Storage Layout
 Use separate virtual disks/LVM volumes:
-1. `/var/lib/fluxdb/postgres` -> PostgreSQL
-2. `/var/lib/fluxdb/minio` -> MinIO
-3. `/var/lib/fluxdb/meili0` ... `/meili3` -> each shard
+1. `/var/lib/vortexvault/postgres` -> PostgreSQL
+2. `/var/lib/vortexvault/minio` -> MinIO
+3. `/var/lib/vortexvault/meili0` ... `/meili3` -> each shard
 
 ## Network
 - Keep services on internal bridge network.
@@ -29,8 +29,8 @@ Use separate virtual disks/LVM volumes:
 
 ## Install
 ```bash
-git clone https://github.com/swanthitsmt/FluxDB-Search-v2.git
-cd FluxDB-Search-v2
+git clone https://github.com/swanthitsmt/VortexVault-Search-v2.git
+cd VortexVault-Search-v2
 cp .env.prodlocal .env
 ```
 
