@@ -83,6 +83,11 @@ curl -s http://localhost:8000/health
 curl -s http://localhost:8000/api/v2/dashboard
 ```
 
+If `API_AUTH_TOKEN` is set, call APIs with:
+```bash
+curl -H "Authorization: Bearer <your-token>" http://localhost:8000/api/v2/dashboard
+```
+
 ## Quick Start (Local Lite)
 ```bash
 ./scripts/lite_up.sh
@@ -171,6 +176,14 @@ Use separate NVMe-backed volumes for:
 - Redis: memory and BF/HLL cardinality trends
 - Meili: per-shard indexing/search response behavior
 - MinIO: object count and capacity
+
+## Security Baseline
+- Bearer token protection for API paths except health/docs (`API_AUTH_TOKEN`). Keep this set in production.
+- Object key and bucket validation on upload/ingest endpoints.
+- Meili filter escaping to avoid query filter injection issues.
+- Security response headers via API middleware (`nosniff`, `DENY`, `no-referrer`).
+- Runtime startup security checks: weak placeholders for API/Meili/MinIO secrets are warned (and rejected in `APP_ENV=prod`).
+- Flower supports optional basic auth (`FLOWER_BASIC_AUTH`), and Flower/MinIO console bind to loopback by default (`FLOWER_BIND_ADDR`, `MINIO_CONSOLE_BIND_ADDR`).
 
 ## Utility Scripts
 - `scripts/preflight_prodlocal.sh` bring up and verify production-like profile.

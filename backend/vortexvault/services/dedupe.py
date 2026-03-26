@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from redis import Redis
+from redis.exceptions import RedisError, ResponseError
 
 from vortexvault.config import settings
 
@@ -16,15 +17,20 @@ class DedupeService:
         try:
             # Capacity is intentionally very high for large datasets.
             self._redis.execute_command("BF.RESERVE", self.bloom_key, 0.0001, 2_000_000_000)
-        except Exception:
-            pass
+        except ResponseError as exc:
+            # Ignore if filter already exists.
+            if "exists" not in str(exc).lower():
+                raise
+        except RedisError:
+            # RedisBloom might be unavailable; fallback path in is_new() remains active.
+            return
 
     def is_new(self, digest_hex: str) -> bool:
         try:
             added = int(self._redis.execute_command("BF.ADD", self.bloom_key, digest_hex))
             self._redis.pfadd(self.hll_key, digest_hex)
             return added == 1
-        except Exception:
+        except RedisError:
             added = int(self._redis.sadd(self.fallback_set_key, digest_hex))
             self._redis.pfadd(self.hll_key, digest_hex)
             return added == 1

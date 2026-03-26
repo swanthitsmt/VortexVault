@@ -10,11 +10,16 @@ BUCKET="$1"
 OBJECT_2GB="$2"
 OBJECT_20GB="${3:-}"
 BASE_URL="${4:-http://localhost:8000}"
+AUTH_HEADER=()
+if [ -n "${API_AUTH_TOKEN:-}" ]; then
+  AUTH_HEADER=(-H "Authorization: Bearer ${API_AUTH_TOKEN}")
+fi
 
 start_ingest() {
   local bucket="$1"
   local object_key="$2"
   curl -sS -X POST "${BASE_URL}/api/v2/ingest/jobs" \
+    "${AUTH_HEADER[@]}" \
     -H 'Content-Type: application/json' \
     -d "{\"source_bucket\":\"${bucket}\",\"source_object\":\"${object_key}\",\"auto_merge\":true}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])'
 }
@@ -22,7 +27,7 @@ start_ingest() {
 poll_ingest() {
   local job_id="$1"
   for i in $(seq 1 7200); do
-    payload=$(curl -sS "${BASE_URL}/api/v2/ingest/jobs/${job_id}")
+    payload=$(curl -sS "${AUTH_HEADER[@]}" "${BASE_URL}/api/v2/ingest/jobs/${job_id}")
     status=$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
     processed=$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin)["processed_lines"])')
     indexed=$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin)["indexed_docs"])')

@@ -28,6 +28,11 @@ cd VortexVault
 - `scripts/lite_up.sh`
 - `scripts/lite_down.sh`
 
+security-related defaults:
+- `FLOWER_BIND_ADDR=127.0.0.1`
+- `MINIO_CONSOLE_BIND_ADDR=127.0.0.1`
+- `FLOWER_BASIC_AUTH=` (လိုအပ်ရင် set)
+
 ## 4) Start Lite Stack (One Command)
 ```bash
 ./scripts/lite_up.sh
@@ -50,6 +55,7 @@ docker compose -f docker-compose.lite.yml up -d --build
 curl -s http://localhost:8000/health
 curl -s http://localhost:8000/api/v2/dashboard
 ```
+`API_AUTH_TOKEN` ကို `.env.lite` ထဲ set လုပ်ထားရင် API call တိုင်း `Authorization: Bearer <token>` header ထည့်ရမယ်။
 
 ## 7) Small Data End-to-End Test
 ### 7.1 test txt create

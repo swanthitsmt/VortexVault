@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from vortexvault.config import settings
+from vortexvault.security import escape_meili_filter
 
 _SETTINGS_PATH = Path(__file__).resolve().parent / "configs" / "meili_index_settings.json"
 INDEX_SETTINGS = json.loads(_SETTINGS_PATH.read_text(encoding="utf-8"))
@@ -70,9 +71,9 @@ class MeiliShardRouter:
 
         filter_terms: list[str] = []
         if filter_url:
-            filter_terms.append(f'url CONTAINS "{filter_url}"')
+            filter_terms.append(f'url CONTAINS "{escape_meili_filter(filter_url)}"')
         if filter_username:
-            filter_terms.append(f'username CONTAINS "{filter_username}"')
+            filter_terms.append(f'username CONTAINS "{escape_meili_filter(filter_username)}"')
 
         payload: dict[str, Any] = {
             "q": query,

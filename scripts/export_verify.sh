@@ -10,15 +10,20 @@ QUERY="$1"
 LINE_LIMIT="$2"
 OUT_FILE="$3"
 BASE_URL="${4:-http://localhost:8000}"
+AUTH_HEADER=()
+if [ -n "${API_AUTH_TOKEN:-}" ]; then
+  AUTH_HEADER=(-H "Authorization: Bearer ${API_AUTH_TOKEN}")
+fi
 
 job_id=$(curl -sS -X POST "${BASE_URL}/api/v2/exports" \
+  "${AUTH_HEADER[@]}" \
   -H 'Content-Type: application/json' \
   -d "{\"query\":\"${QUERY}\",\"line_limit\":${LINE_LIMIT}}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
 
 echo "export_job_id=${job_id}"
 
 for i in $(seq 1 1800); do
-  payload=$(curl -sS "${BASE_URL}/api/v2/exports/${job_id}")
+  payload=$(curl -sS "${AUTH_HEADER[@]}" "${BASE_URL}/api/v2/exports/${job_id}")
   status=$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
   rows=$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("exported_rows", 0))')
   echo "[$i] status=${status} exported_rows=${rows}"
@@ -32,7 +37,7 @@ for i in $(seq 1 1800); do
   sleep 2
 done
 
-download_url=$(curl -sS "${BASE_URL}/api/v2/exports/${job_id}/download" | python3 -c 'import json,sys; print(json.load(sys.stdin)["download_url"])')
+download_url=$(curl -sS "${AUTH_HEADER[@]}" "${BASE_URL}/api/v2/exports/${job_id}/download" | python3 -c 'import json,sys; print(json.load(sys.stdin)["download_url"])')
 curl -sS "$download_url" -o "$OUT_FILE"
 
 echo "parquet_file=${OUT_FILE}"

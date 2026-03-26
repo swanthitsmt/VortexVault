@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,15 +33,27 @@ from vortexvault.schemas import (
     SearchQueryRequest,
     SearchQueryResponse,
 )
+from vortexvault.security import auth_middleware, sanitize_bucket_name, sanitize_object_name, validate_runtime_security_or_raise
 from vortexvault.services.dedupe import dedupe_service
 from vortexvault.services.meili import meili_router
 from vortexvault.services.minio_store import minio_store
 
 app = FastAPI(title=settings.app_name, version="2.0.0")
+app.middleware("http")(auth_middleware)
+
+if settings.cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
 
 @app.on_event("startup")
 async def startup() -> None:
+    validate_runtime_security_or_raise()
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     minio_store.ensure_bucket(settings.minio_bucket_raw)
@@ -55,19 +68,21 @@ async def root() -> RedirectResponse:
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "time": datetime.utcnow().isoformat()}
+    return {"status": "ok", "time": datetime.now(timezone.utc).isoformat()}
 
 
 @app.post("/api/v2/files/presign", response_model=PresignUploadResponse)
 async def presign_upload(payload: PresignUploadRequest) -> PresignUploadResponse:
-    object_key = f"raw/{payload.object_name}"
+    safe_object_name = sanitize_object_name(payload.object_name)
+    object_key = f"raw/{safe_object_name}"
     put_url = minio_store.presign_put(settings.minio_bucket_raw, object_key)
     return PresignUploadResponse(bucket=settings.minio_bucket_raw, object_key=object_key, put_url=put_url)
 
 
 @app.post("/api/v2/files/multipart/init", response_model=MultipartInitResponse)
 async def multipart_init(payload: MultipartInitRequest, session: AsyncSession = Depends(get_async_session)) -> MultipartInitResponse:
-    object_key = f"raw/{payload.object_name}"
+    safe_object_name = sanitize_object_name(payload.object_name)
+    object_key = f"raw/{safe_object_name}"
     upload_id = minio_store.initiate_multipart_upload(settings.minio_bucket_raw, object_key)
 
     upload_session = UploadSession(
@@ -114,6 +129,12 @@ async def multipart_complete(payload: MultipartCompleteRequest, session: AsyncSe
     if upload_session.status != UploadStatus.initiated:
         raise HTTPException(status_code=409, detail="Upload session is not active")
 
+    part_numbers = [part.part_number for part in payload.parts]
+    if not part_numbers or len(part_numbers) != len(set(part_numbers)):
+        raise HTTPException(status_code=422, detail="Multipart parts must be unique")
+    if len(part_numbers) > upload_session.total_parts:
+        raise HTTPException(status_code=422, detail="Multipart part count exceeds initialized total parts")
+
     try:
         minio_store.complete_multipart_upload(
             upload_session.bucket,
@@ -126,17 +147,19 @@ async def multipart_complete(payload: MultipartCompleteRequest, session: AsyncSe
         raise HTTPException(status_code=400, detail=f"Multipart complete failed: {exc}") from exc
 
     upload_session.status = UploadStatus.completed
-    upload_session.completed_at = datetime.utcnow()
+    upload_session.completed_at = datetime.now(timezone.utc)
     await session.commit()
     return {"status": "completed", "object_key": upload_session.object_key}
 
 
 @app.post("/api/v2/ingest/jobs", response_model=IngestJobResponse)
 async def create_ingest_job(payload: IngestCreateRequest, session: AsyncSession = Depends(get_async_session)) -> IngestJobResponse:
+    safe_bucket = sanitize_bucket_name(payload.source_bucket)
+    safe_object = sanitize_object_name(payload.source_object)
     job = IngestJob(
         status=JobStatus.queued,
-        source_bucket=payload.source_bucket,
-        source_object=payload.source_object,
+        source_bucket=safe_bucket,
+        source_object=safe_object,
         metadata_json={"auto_merge": payload.auto_merge},
         shard_counts={str(i): 0 for i in range(settings.shard_count)},
     )

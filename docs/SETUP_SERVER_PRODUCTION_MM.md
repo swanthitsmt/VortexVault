@@ -65,6 +65,10 @@ nano .env
 - `POSTGRES_PASSWORD`
 - `MINIO_ROOT_PASSWORD`
 - `MEILI_MASTER_KEY`
+- `API_AUTH_TOKEN` (အရေးကြီး, random long token)
+- `FLOWER_BASIC_AUTH` (example `ops:<strong-password>`)
+- `FLOWER_BIND_ADDR=127.0.0.1` (default)
+- `MINIO_CONSOLE_BIND_ADDR=127.0.0.1` (default)
 - `EDGE_BIND_PORT` (လိုသလို)
 
 ## 6) Start Stack
@@ -86,7 +90,7 @@ docker compose logs -f worker-ingest
 ## 7) Health Check
 ```bash
 curl -s http://127.0.0.1:8000/health
-curl -s http://127.0.0.1:8000/api/v2/dashboard | jq
+curl -s -H "Authorization: Bearer <API_AUTH_TOKEN>" http://127.0.0.1:8000/api/v2/dashboard | jq
 ```
 
 ## 8) Firewall (LAN Only)
@@ -112,6 +116,7 @@ TXT
 presign request:
 ```bash
 RESP=$(curl -sS -X POST http://127.0.0.1:8000/api/v2/files/presign \
+  -H "Authorization: Bearer <API_AUTH_TOKEN>" \
   -H 'Content-Type: application/json' \
   -d '{"object_name":"sample/vortex_sample.txt"}')
 echo "$RESP" | jq
@@ -127,6 +132,7 @@ curl -sS -X PUT --upload-file /tmp/vortex_sample.txt "$PUT_URL"
 ingest job create:
 ```bash
 JOB=$(curl -sS -X POST http://127.0.0.1:8000/api/v2/ingest/jobs \
+  -H "Authorization: Bearer <API_AUTH_TOKEN>" \
   -H 'Content-Type: application/json' \
   -d "{\"source_bucket\":\"raw-combos\",\"source_object\":\"$OBJECT_KEY\",\"auto_merge\":true}")
 echo "$JOB" | jq
@@ -135,12 +141,13 @@ JOB_ID=$(echo "$JOB" | jq -r '.id')
 
 poll:
 ```bash
-watch -n 2 "curl -s http://127.0.0.1:8000/api/v2/ingest/jobs/$JOB_ID | jq '{status,processed_lines,indexed_docs,duplicate_lines}'"
+watch -n 2 "curl -s -H 'Authorization: Bearer <API_AUTH_TOKEN>' http://127.0.0.1:8000/api/v2/ingest/jobs/$JOB_ID | jq '{status,processed_lines,indexed_docs,duplicate_lines}'"
 ```
 
 search:
 ```bash
 curl -sS -X POST http://127.0.0.1:8000/api/v2/search/query \
+  -H "Authorization: Bearer <API_AUTH_TOKEN>" \
   -H 'Content-Type: application/json' \
   -d '{"query":"gmail.com","limit":20,"prefix":true,"typo_tolerance":true}' | jq
 ```

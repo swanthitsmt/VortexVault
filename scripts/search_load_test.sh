@@ -14,14 +14,19 @@ TMP_FILE="$(mktemp)"
 trap 'rm -f "$TMP_FILE"' EXIT
 
 run_one() {
+  auth_args=()
+  if [ -n "${API_AUTH_TOKEN:-}" ]; then
+    auth_args=(-H "Authorization: Bearer ${API_AUTH_TOKEN}")
+  fi
   curl -sS -o /dev/null -w "%{time_total}\n" \
     -X POST "${BASE_URL}/api/v2/search/query" \
+    "${auth_args[@]}" \
     -H 'Content-Type: application/json' \
     -d "{\"query\":\"${QUERY}\",\"limit\":50,\"prefix\":true,\"typo_tolerance\":true}" || echo "ERR"
 }
 
 export -f run_one
-export BASE_URL QUERY
+export BASE_URL QUERY API_AUTH_TOKEN
 
 seq "$REQUESTS" | xargs -I{} -P "$CONCURRENCY" bash -lc 'run_one' >> "$TMP_FILE"
 

@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     app_env: str = "local"
     api_host: str = "0.0.0.0"
     api_port: int = 8080
+    api_auth_token: str = ""
+    api_auth_exempt_paths: str = "/health,/docs,/openapi.json,/redoc"
 
     database_url: str = "postgresql+asyncpg://vortexvault:vortexvault@postgres:5432/vortexvault"
     database_url_sync: str = "postgresql+psycopg://vortexvault:vortexvault@postgres:5432/vortexvault"
@@ -46,6 +48,7 @@ class Settings(BaseSettings):
     export_presign_ttl_sec: int = Field(default=3600, ge=60, le=86400)
 
     metrics_retention_days: int = Field(default=14, ge=1, le=90)
+    cors_allowed_origins: str = ""
 
     @property
     def meili_hosts(self) -> list[str]:
@@ -59,6 +62,18 @@ class Settings(BaseSettings):
     @property
     def checkpoint_stride_bytes(self) -> int:
         return self.ingest_checkpoint_stride_gb * 1024 * 1024 * 1024
+
+    @property
+    def is_auth_enabled(self) -> bool:
+        return bool(self.api_auth_token.strip())
+
+    @property
+    def auth_exempt_paths(self) -> list[str]:
+        return [path.strip() for path in self.api_auth_exempt_paths.split(",") if path.strip()]
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
 
 @lru_cache(maxsize=1)
